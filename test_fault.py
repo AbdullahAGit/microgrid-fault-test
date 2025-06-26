@@ -15,6 +15,8 @@ def load_model():
     
     #enable grid components
     grid_components = [
+        #enable microgrid controller
+        'MGCC_ON',
         #connect grid
         'Grid UI1.Connect',
         #grid enables
