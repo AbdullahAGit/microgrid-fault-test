@@ -22,6 +22,11 @@ def load_model():
         'Diesel Genset (Generic) UI1.Enable',
         'PV Power Plant (Generic) UI1.Enable',
         'Wind Power Plant (Generic) UI1.Enable',
+        #Wind Turbine
+        'Wind Power Plant (Generic) UI1.Pcurtailment',
+        'Wind Power Plant (Generic) UI1.MPPT rate of change',
+        'Wind Power Plant (Generic) UI1.Pcurtailment rate of change',
+        'Wind Power Plant (Generic) UI1.Qref rate of change'
         ]
     for component in grid_components:
         hil.set_scada_input_value(scadaInputName=component,
@@ -32,8 +37,54 @@ def load_model():
                                value=0.7, 
                                )
     hil.set_scada_input_value(scadaInputName='Battery ESS (Generic) UI1.Pref rate of change', 
+                               value=1, 
+                               )
+    
+    #Wind Plant Inputs
+    #PV Plant Inputs
+    hil.set_scada_input_value(scadaInputName='PV Power Plant (Generic) UI1.Pcurtailment', 
+                               value=1, 
+                               )
+    hil.set_scada_input_value(scadaInputName='PV Power Plant (Generic) UI1.Qref', 
+                               value=0, 
+                               )
+    hil.set_scada_input_value(scadaInputName='PV Power Plant (Generic) UI1.Pcurtailment rate of change', 
+                               value=1, 
+                               )
+    hil.set_scada_input_value(scadaInputName='PV Power Plant (Generic) UI1.Qref rate of change', 
+                               value=1, 
+                               )
+    hil.set_scada_input_value(scadaInputName='PV Power Plant (Generic) UI1.MPPT rate of change', 
+                               value=1, 
+                               )                           
+    #Diesel Genset Inputs
+    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Pref', 
                                value=0.1, 
                                )
+    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Qref', 
+                               value=0.02, 
+                               )
+    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Frequency droop offset', 
+                               value=1.0, 
+                               ) 
+    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Frequency droop coeff', 
+                               value=7, 
+                               )
+    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Voltage droop coeff', 
+                               value=10, 
+                               )
+    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Pref rate of change', 
+                               value=0.05, 
+                               )
+    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Qref rate of change', 
+                               value=1.0, 
+                               )
+    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Vrms_ref rate of change', 
+                               value=1.0, 
+                               )
+    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Qref rate of change', 
+                               value=1.0, 
+                               )                           
     yield 
     
     #Fixture teardown code
@@ -70,12 +121,13 @@ def test_faults(return_to_default):
                             #'PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc',
                             #'PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC',
                             #'Grid UI1.Vrms_meas_kV', 'Grid UI1.Qmeas_kVAr', 'Grid UI1.Pmeas_kW',
-                            #'Wind Power Plant (Generic) UI1.Pmeas_kW', 'PV Power Plant (Generic) UI1.Pmeas_kW',
-                            'Battery ESS (Generic) UI1.Pmeas_kW', #'Diesel Genset (Generic) UI1.Pmeas_kW',
+                            'Wind Power Plant (Generic) UI1.Pmeas_kW', 'PV Power Plant (Generic) UI1.Pmeas_kW',
+                            'Battery ESS (Generic) UI1.Pmeas_kW', 'Diesel Genset (Generic) UI1.Pmeas_kW',
                             #'Wind Power Plant (Generic) UI1.wind_speed_m_per_s',
+                            'Wind Power Plant (Generic) UI1.MCB_status', 'PV Power Plant (Generic) UI1.MCB_status',
+                            'Diesel Genset (Generic) UI1.MCB_status', 'Battery ESS (Generic) UI1.MCB_status',
                        ],)
     
-                       
     #Fault Section (halfway after cap starts)                  
     #cap.wait(secs=time_before_fault)
     
