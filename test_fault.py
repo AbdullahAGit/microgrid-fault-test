@@ -72,16 +72,25 @@ def load_model():
 @pytest.fixture()
 def return_to_default(load_model):
     #Fixture setup code
-    hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
-                               value=1, 
-                               )
-                               
-    hil.set_contactor(name='Fault infront of WT.enable', 
-                       swControl=True, 
-                       swState=False, 
-                       )
+    #hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
+    #                           value=1, 
+    #                           )
+    faults =  ['Fault infront of WT.enable', 'Fault infront of WT1.enable', 
+    'Fault infront of PV.enable', 'Fault infront of B.enable', 
+    'Fault between WTE.enable', 'Fault between WT-BE.enable', 
+    'Fault between WT-BI.enable']
+    
+    for fault in faults:
+        hil.set_contactor(name=fault, 
+                           swControl=True, 
+                           swState=False, 
+                           )
 
-def test_faults(return_to_default):
+@pytest.mark.parametrize('fault', [('Fault infront of WT.enable'),('Fault infront of WT1.enable'), 
+                                        ('Fault infront of PV.enable'),('Fault infront of B.enable'), 
+                                        ('Fault between WTE.enable'),('Fault between WT-BE.enable'), 
+                                        ('Fault between WT-BI.enable')])
+def test_faults(return_to_default, fault):
     """
     test different fault locations & measures grid current and voltage
     """
@@ -95,11 +104,11 @@ def test_faults(return_to_default):
     cap.start_capture(duration=cap_duration, 
                        rate=fs, 
                        signals=[
-                            #'Grid1.Vc', 'Grid1.Vb', 'Grid1.Va', 
-                            #'Grid1.Ic', 'Grid1.Ib', 'Grid1.Ia',
-                            #'PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc',
-                            #'PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC',
-                            #'Grid UI1.Vrms_meas_kV', 'Grid UI1.Qmeas_kVAr', 'Grid UI1.Pmeas_kW',
+                            'Grid1.Vc', 'Grid1.Vb', 'Grid1.Va', 
+                            'Grid1.Ic', 'Grid1.Ib', 'Grid1.Ia',
+                            'PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc',
+                            'PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC',
+                            'Grid UI1.Vrms_meas_kV', 'Grid UI1.Qmeas_kVAr', 'Grid UI1.Pmeas_kW',
                             'Wind Power Plant (Generic) UI1.Pmeas_kW', 'PV Power Plant (Generic) UI1.Pmeas_kW',
                             'Battery ESS (Generic) UI1.Pmeas_kW', 'Diesel Genset (Generic) UI1.Pmeas_kW',
                             #'Wind Power Plant (Generic) UI1.wind_speed_m_per_s',
@@ -112,11 +121,14 @@ def test_faults(return_to_default):
     hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
                                value=0.5, 
                                )
+   
+   
                                
-    #hil.set_contactor(name='Fault infront of WT.enable', 
-    #                   swControl=True, 
-    #                   swState=True, 
-    #                   )
+    #line faults
+    hil.set_contactor(name=fault, 
+                       swControl=True, 
+                       swState=True, 
+                       )
     
     #Fault reperation
     #cap.wait(secs=0.5)
