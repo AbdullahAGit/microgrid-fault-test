@@ -13,78 +13,56 @@ def load_model():
                     )
     hil.start_simulation()
     
-    #enable grid components
-    grid_components = [
-        #connect grid
-        'Grid UI1.Connect',
-        #grid enables
-        'Battery ESS (Generic) UI1.Enable',
-        'Diesel Genset (Generic) UI1.Enable',
-        'PV Power Plant (Generic) UI1.Enable',
-        'Wind Power Plant (Generic) UI1.Enable',
-        #Wind Turbine
-        'Wind Power Plant (Generic) UI1.Pcurtailment',
-        'Wind Power Plant (Generic) UI1.MPPT rate of change',
-        'Wind Power Plant (Generic) UI1.Pcurtailment rate of change',
-        'Wind Power Plant (Generic) UI1.Qref rate of change'
-        ]
-    for component in grid_components:
-        hil.set_scada_input_value(scadaInputName=component,
-                                    value=1,
-                                    )
+    #Grid Inputs
+    inputs_grid = {
+        'Grid UI1.Connect': 1,
+    }
     #Battery Inputs
-    hil.set_scada_input_value(scadaInputName='Battery ESS (Generic) UI1.Pref', 
-                               value=0.7, 
-                               )
-    hil.set_scada_input_value(scadaInputName='Battery ESS (Generic) UI1.Pref rate of change', 
-                               value=1, 
-                               )
+    inputs_battery = {
+        'Battery ESS (Generic) UI1.Enable': 1,
+        'Battery ESS (Generic) UI1.Pref': 0.7,
+        'Battery ESS (Generic) UI1.Pref rate of change': 1,
+    }
     
     #Wind Plant Inputs
+    inputs_windturbine = {
+        'Wind Power Plant (Generic) UI1.Enable': 1,
+        'Wind Power Plant (Generic) UI1.Pcurtailment': 1,
+        'Wind Power Plant (Generic) UI1.MPPT rate of change': 1,
+        'Wind Power Plant (Generic) UI1.Pcurtailment rate of change': 1,
+        'Wind Power Plant (Generic) UI1.Qref rate of change': 1,
+        
+    }
     #PV Plant Inputs
-    hil.set_scada_input_value(scadaInputName='PV Power Plant (Generic) UI1.Pcurtailment', 
-                               value=1, 
-                               )
-    hil.set_scada_input_value(scadaInputName='PV Power Plant (Generic) UI1.Qref', 
-                               value=0, 
-                               )
-    hil.set_scada_input_value(scadaInputName='PV Power Plant (Generic) UI1.Pcurtailment rate of change', 
-                               value=1, 
-                               )
-    hil.set_scada_input_value(scadaInputName='PV Power Plant (Generic) UI1.Qref rate of change', 
-                               value=1, 
-                               )
-    hil.set_scada_input_value(scadaInputName='PV Power Plant (Generic) UI1.MPPT rate of change', 
-                               value=1, 
-                               )                           
+    inputs_pvplant = {
+        'PV Power Plant (Generic) UI1.Enable': 1,
+        'PV Power Plant (Generic) UI1.Pcurtailment': 1,
+        'PV Power Plant (Generic) UI1.Qref': 0,
+        'PV Power Plant (Generic) UI1.Pcurtailment rate of change': 1,
+        'PV Power Plant (Generic) UI1.Qref rate of change': 1,
+        'PV Power Plant (Generic) UI1.MPPT rate of change': 1,
+    }
+                        
     #Diesel Genset Inputs
-    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Pref', 
-                               value=0.1, 
-                               )
-    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Qref', 
-                               value=0.02, 
-                               )
-    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Frequency droop offset', 
-                               value=1.0, 
-                               ) 
-    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Frequency droop coeff', 
-                               value=7, 
-                               )
-    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Voltage droop coeff', 
-                               value=10, 
-                               )
-    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Pref rate of change', 
-                               value=0.05, 
-                               )
-    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Qref rate of change', 
-                               value=1.0, 
-                               )
-    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Vrms_ref rate of change', 
-                               value=1.0, 
-                               )
-    hil.set_scada_input_value(scadaInputName='Diesel Genset (Generic) UI1.Qref rate of change', 
-                               value=1.0, 
-                               )                           
+    inputs_dieselgenset = {
+        'Diesel Genset (Generic) UI1.Enable': 1,
+        'Diesel Genset (Generic) UI1.Pref': 0.1,
+        'Diesel Genset (Generic) UI1.Qref': 0.02,
+        'Diesel Genset (Generic) UI1.Frequency droop offset': 1.0,
+        'Diesel Genset (Generic) UI1.Frequency droop coeff': 7,
+        'Diesel Genset (Generic) UI1.Voltage droop coeff': 10,
+        'Diesel Genset (Generic) UI1.Pref rate of change': 0.05,
+        'Diesel Genset (Generic) UI1.Qref rate of change': 1.0,
+        'Diesel Genset (Generic) UI1.Vrms_ref rate of change': 1.0,
+        'Diesel Genset (Generic) UI1.Qref rate of change': 1.0,
+    }
+    
+    scadaInputs = {**inputs_grid, **inputs_battery, **inputs_windturbine,
+                    **inputs_pvplant, **inputs_dieselgenset}
+    
+    for key, value in scadaInputs.items():
+        hil.set_scada_input_value(scadaInputName=key, value=value)    
+    
     yield 
     
     #Fixture teardown code
@@ -107,11 +85,12 @@ def test_faults(return_to_default):
     """
     test different fault locations & measures grid current and voltage
     """
+    print(hil.get_scada_input_settings(scadaInputName='Grid UI1.Grid_Vrms_cmd'))
     
-    cap.wait(secs=0) #wait 5 sec after starting simulation for steady cap
+    cap.wait(secs=3) #wait 3 sec after starting simulation for steady cap
     
     #start capture
-    cap_duration = 6
+    cap_duration = 2
     time_before_fault = cap_duration/2
     cap.start_capture(duration=cap_duration, 
                        rate=fs, 
@@ -129,11 +108,10 @@ def test_faults(return_to_default):
                        ],)
     
     #Fault Section (halfway after cap starts)                  
-    #cap.wait(secs=time_before_fault)
-    
-    #hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
-    #                           value=1, 
-    #                           )
+    cap.wait(secs=time_before_fault)
+    hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
+                               value=0.5, 
+                               )
                                
     #hil.set_contactor(name='Fault infront of WT.enable', 
     #                   swControl=True, 
