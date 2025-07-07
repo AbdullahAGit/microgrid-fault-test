@@ -91,6 +91,8 @@ def load_model():
     for key, value in scadaInputs.items():
         hil.set_scada_input_value(scadaInputName=key, value=value)    
     
+    cap.wait(secs=20)
+    
     yield 
     
     #Fixture teardown code
@@ -104,7 +106,7 @@ def return_to_default(load_model):
     #                           value=1, 
     #                           )
     
-    #hil.set_contactor(name='PCC_monitor.S1',swControl=True,swState=False,)
+    hil.set_contactor(name='PCC_monitor.S1',swControl=True,swState=False,)
     
     faults =  ['Fault infront of WT.enable', 'Fault infront of WT1.enable', 
                 'Fault infront of PV.enable', 'Fault infront of B.enable', 
@@ -119,7 +121,7 @@ def return_to_default(load_model):
                            
 """comment whichever faults you do NOT want included in the test"""
 @pytest.mark.parametrize('fault', [ ('Fault infront of WT.enable'),
-                                    #('Fault infront of WT1.enable'), 
+                                    ('Fault infront of WT1.enable'), 
                                     #('Fault infront of PV.enable'),
                                     #('Fault infront of B.enable'), 
                                     #('Fault between WTE.enable'),
@@ -153,11 +155,11 @@ def test_faults(return_to_default, fault):
     #while (hil.read_analog_signal(name='Diesel Genset (Generic) UI1.Enable_fb')) == 0:
     #    cap.wait(secs=0.5)
 
-    #cap.wait(secs=20)
+    cap.wait(secs=1)
     
 #Capture Section    
     #start capture
-    cap_duration = 20
+    cap_duration = 2
     time_before_fault = cap_duration/2
     cap.start_capture(duration=cap_duration, 
                        rate=fs, 
@@ -169,13 +171,13 @@ def test_faults(return_to_default, fault):
                             'Grid UI1.Vrms_meas_kV', 'Grid UI1.Qmeas_kVAr', 'Grid UI1.Pmeas_kW',
                             'Wind Power Plant (Generic) UI1.Pmeas_kW', 'PV Power Plant (Generic) UI1.Pmeas_kW',
                             'Battery ESS (Generic) UI1.Pmeas_kW', 'Diesel Genset (Generic) UI1.Pmeas_kW',
-                            #'Wind Power Plant (Generic) UI1.wind_speed_m_per_s',
+                            'Wind Power Plant (Generic) UI1.wind_speed_m_per_s',
                             #'Wind Power Plant (Generic) UI1.MCB_status', 'PV Power Plant (Generic) UI1.MCB_status',
                             #'Diesel Genset (Generic) UI1.MCB_status', 'Battery ESS (Generic) UI1.MCB_status',
                        ],)
     
 #Fault Section (halfway after cap starts)                  
-    #cap.wait(secs=time_before_fault)
+    cap.wait(secs=time_before_fault)
     #hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
     #                           value=0.5, 
     #                           )
@@ -185,7 +187,7 @@ def test_faults(return_to_default, fault):
     #line faults
     hil.set_contactor(name=fault, 
                        swControl=True, 
-                       swState=False, 
+                       swState=True, 
                        )
     
     #Fault reperation
