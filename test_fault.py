@@ -17,7 +17,6 @@ def load_model():
     hil.load_model(file='microgrid_Data generation Target files\\microgrid_Data generation.cpd', 
                     vhil_device=True, 
                     )
-    hil.start_simulation()
     
     #Source Inputs
     hil.set_source_sine_waveform(name='Grid1.Vsp_sin1', 
@@ -91,7 +90,7 @@ def load_model():
     for key, value in scadaInputs.items():
         hil.set_scada_input_value(scadaInputName=key, value=value)    
     
-    cap.wait(secs=20)
+    hil.start_simulation()
     
     yield 
     
@@ -106,7 +105,7 @@ def return_to_default(load_model):
     #                           value=1, 
     #                           )
     
-    hil.set_contactor(name='PCC_monitor.S1',swControl=True,swState=False,)
+    #hil.set_contactor(name='PCC_monitor.S1',swControl=True,swState=True,)
     
     faults =  ['Fault infront of WT.enable', 'Fault infront of WT1.enable', 
                 'Fault infront of PV.enable', 'Fault infront of B.enable', 
@@ -155,7 +154,7 @@ def test_faults(return_to_default, fault):
     #while (hil.read_analog_signal(name='Diesel Genset (Generic) UI1.Enable_fb')) == 0:
     #    cap.wait(secs=0.5)
 
-    cap.wait(secs=1)
+    cap.wait(secs=20)
     
 #Capture Section    
     #start capture
