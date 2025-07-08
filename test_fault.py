@@ -89,13 +89,7 @@ def load_model():
     
     for key, value in scadaInputs.items():
         hil.set_scada_input_value(scadaInputName=key, value=value)    
-    
-    hil.start_simulation()
-    
-    yield 
-    
-    #Fixture teardown code
-    hil.stop_simulation()
+        
     
 #function scope i.e running before beginning each test
 @pytest.fixture()
@@ -105,7 +99,8 @@ def return_to_default(load_model):
     #                           value=1, 
     #                           )
     
-    #hil.set_contactor(name='PCC_monitor.S1',swControl=True,swState=True,)
+    hil.set_contactor(name='PCC_monitor.S1',swControl=True,swState=True,)
+    hil.set_contactor(name='PCC_monitor.S1',swControl=False)
     
     faults =  ['Fault infront of WT.enable', 'Fault infront of WT1.enable', 
                 'Fault infront of PV.enable', 'Fault infront of B.enable', 
@@ -118,6 +113,13 @@ def return_to_default(load_model):
                            swState=False, 
                            )
                            
+    hil.start_simulation()
+    
+    yield 
+    
+    #Fixture teardown code
+    hil.stop_simulation()
+    
 """comment whichever faults you do NOT want included in the test"""
 @pytest.mark.parametrize('fault', [ ('Fault infront of WT.enable'),
                                     ('Fault infront of WT1.enable'), 
