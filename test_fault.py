@@ -19,6 +19,7 @@ def load_model():
                     )
     
     #Source Inputs
+    """
     hil.set_source_sine_waveform(name='Grid1.Vsp_sin1', 
                                   rms=math.sqrt(2), 
                                   )
@@ -28,15 +29,19 @@ def load_model():
     hil.set_source_sine_waveform(name='Grid1.Vsp_sin3', 
                                   rms=math.sqrt(2), 
                                   )                              
+    """
     #Grid Inputs
     inputs_grid = {
-        'Grid UI1.Connect': 1,
+        'Grid UI1.Connect': 1.0,
+        'MGCC_ON': 1.0,
+        'c_option': 0.0,
+        'op_mode': 0.0,
     }
     #Battery Inputs
     inputs_battery = {
-        'Battery ESS (Generic) UI1.Enable': 1,        
+        'Battery ESS (Generic) UI1.Enable': 1.0,        
         'Battery ESS (Generic) UI1.Pref': 0.7,
-        'Battery ESS (Generic) UI1.Pref rate of change': 1,
+        'Battery ESS (Generic) UI1.Pref rate of change': 1.0,
         'Battery ESS (Generic) UI1.Converter mode': 1.0,
         
     }
@@ -61,12 +66,12 @@ def load_model():
     }
     #PV Plant Inputs
     inputs_pvplant = {
-        'PV Power Plant (Generic) UI1.Pcurtailment': 1,
+        'PV Power Plant (Generic) UI1.Pcurtailment': 1.0,
         'PV Power Plant (Generic) UI1.Qref': 0,
-        'PV Power Plant (Generic) UI1.Pcurtailment rate of change': 1,
-        'PV Power Plant (Generic) UI1.Qref rate of change': 1,
-        'PV Power Plant (Generic) UI1.MPPT rate of change': 1,
-        'PV Power Plant (Generic) UI1.Enable': 1,
+        'PV Power Plant (Generic) UI1.Pcurtailment rate of change': 1.0,
+        'PV Power Plant (Generic) UI1.Qref rate of change': 1.0,
+        'PV Power Plant (Generic) UI1.MPPT rate of change': 1.0,
+        'PV Power Plant (Generic) UI1.Enable': 1.0,
     }
                         
     #Diesel Genset Inputs
@@ -81,7 +86,7 @@ def load_model():
         'Diesel Genset (Generic) UI1.Qref rate of change': 1.0,
         'Diesel Genset (Generic) UI1.Vrms_ref rate of change': 1.0,
         'Diesel Genset (Generic) UI1.Qref rate of change': 1.0,
-        'Diesel Genset (Generic) UI1.Enable': 1,
+        'Diesel Genset (Generic) UI1.Enable': 1.0,
     }
     
     scadaInputs = {**inputs_grid, **inputs_battery, **inputs_windturbine,
@@ -89,18 +94,14 @@ def load_model():
     
     for key, value in scadaInputs.items():
         hil.set_scada_input_value(scadaInputName=key, value=value)    
-        
     
 #function scope i.e running before beginning each test
 @pytest.fixture()
 def return_to_default(load_model):
     #Fixture setup code
-    #hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
-    #                           value=1, 
-    #                           )
-    
-    hil.set_contactor(name='PCC_monitor.S1',swControl=True,swState=True,)
-    hil.set_contactor(name='PCC_monitor.S1',swControl=False)
+    hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
+                               value=1.0, 
+                               )
     
     faults =  ['Fault infront of WT.enable', 'Fault infront of WT1.enable', 
                 'Fault infront of PV.enable', 'Fault infront of B.enable', 
@@ -122,7 +123,7 @@ def return_to_default(load_model):
     
 """comment whichever faults you do NOT want included in the test"""
 @pytest.mark.parametrize('fault', [ ('Fault infront of WT.enable'),
-                                    ('Fault infront of WT1.enable'), 
+                                    #('Fault infront of WT1.enable'), 
                                     #('Fault infront of PV.enable'),
                                     #('Fault infront of B.enable'), 
                                     #('Fault between WTE.enable'),
@@ -142,6 +143,7 @@ def test_faults(return_to_default, fault):
     print(hil.get_contactor_settings(name='Fault between WTE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BI.enable'))
+    
     print("BREAKER SETTINGS")
     print(hil.get_contactor_settings(name='PCC_monitor.S1'))
     print(hil.get_contactor_settings(name='Battery ESS (Generic)1.Grid Converter1.Contactor.S1'))
@@ -156,7 +158,7 @@ def test_faults(return_to_default, fault):
     #while (hil.read_analog_signal(name='Diesel Genset (Generic) UI1.Enable_fb')) == 0:
     #    cap.wait(secs=0.5)
 
-    cap.wait(secs=20)
+    cap.wait(secs=2)
     
 #Capture Section    
     #start capture
@@ -165,7 +167,8 @@ def test_faults(return_to_default, fault):
     cap.start_capture(duration=cap_duration, 
                        rate=fs, 
                        signals=[
-                            #'Grid1.Vc', 'Grid1.Vb', 'Grid1.Va', 
+                            'Grid1.Vc', 'Grid1.Vb', 'Grid1.Va'
+                            'PCC_monitor.S1_fb', 
                             'Grid1.Ic', 'Grid1.Ib', 'Grid1.Ia',
                             'PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc',
                             'PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC',
