@@ -99,9 +99,12 @@ def load_model():
 @pytest.fixture()
 def return_to_default(load_model):
     #Fixture setup code
-    hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
-                               value=1.0, 
-                               )
+    #hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
+    #                           value=1, 
+    #                           )
+    
+    hil.set_contactor(name='PCC_monitor.S1',swControl=True,swState=True,)
+    hil.set_contactor(name='PCC_monitor.S1',swControl=False)
     
     faults =  ['Fault infront of WT.enable', 'Fault infront of WT1.enable', 
                 'Fault infront of PV.enable', 'Fault infront of B.enable', 
