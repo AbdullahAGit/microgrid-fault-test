@@ -17,6 +17,7 @@ def load_model():
 #Fixture setup code
 
     mdl.load(filename='microgrid_Data generation.tse')
+
     mdl.compile()
 
     hil.load_model(file='microgrid_Data generation Target files\\microgrid_Data generation.cpd', 
@@ -135,17 +136,16 @@ def load_model():
     
 """comment whichever faults you do NOT want included in the test"""
 @pytest.mark.parametrize('fault', [ ('Fault infront of WT.enable'),
-                                    ('Fault infront of WT1.enable'), 
-                                    ('Fault infront of PV.enable'),
-                                    ('Fault infront of B.enable'), 
-                                    ('Fault between WTE.enable'),
-                                    ('Fault between WT-BE.enable'),
-                                    ('Fault between WT-BI.enable'),                                    
+                                    #('Fault infront of WT1.enable'), 
+                                    #('Fault infront of PV.enable'),
+                                    #('Fault infront of B.enable'), 
+                                    #('Fault between WTE.enable'),
+                                    #('Fault between WT-BE.enable'),
+                                    #('Fault between WT-BI.enable'), 
+                                    ('gridfault'),
                                     ])
 def test_faults(load_model, fault):
-    """
-    test different fault locations & measures grid current and voltage
-    """
+    """test different fault locations & measures grid current and voltage"""
     
     print("FAULT SETTINGS")
     print(hil.get_contactor_settings(name='Fault infront of WT.enable'))
@@ -169,9 +169,6 @@ def test_faults(load_model, fault):
     print(hil.get_source_settings(name='Grid1.Vsp_sin2'))
     print(hil.get_source_settings(name='Grid1.Vsp_sin3'))
     print(hil.get_scada_input_settings(scadaInputName='Grid UI1.Grid_Vrms_cmd'))
-    
-    #while (hil.read_analog_signal(name='Diesel Genset (Generic) UI1.Enable_fb')) == 0:
-    #    cap.wait(secs=0.5)
 
     cap.wait(secs=20)
     
@@ -202,30 +199,17 @@ def test_faults(load_model, fault):
     
 #Fault Section (halfway after cap starts)                  
     cap.wait(secs=time_before_fault)
-    #hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
-    #                           value=0.5, 
-    #                           )
-   
-   
-                               
-    #line faults
-    hil.set_contactor(name=fault, 
-                       swControl=True, 
-                       swState=True, 
-                       )
-    
-    #Fault reperation
-    cap.wait(secs=0.5)
-    
-    #hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
-    #                           value=1, 
-    #                           )
-    
-    hil.set_contactor(name=fault, 
-                       swControl=False, 
-                       swState=False, 
-                       )
-    
+ 
+    if  (fault == 'gridfault'):
+            hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
+                               value=0.5, 
+                               )
+    else:                           
+        hil.set_contactor(name=fault, 
+                           swControl=True, 
+                           swState=True, 
+                           )
+                       
     df = cap.get_capture_results(wait_capture=True)
     
     print("AFTER CAP")
