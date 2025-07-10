@@ -12,9 +12,13 @@ mdl = SchematicAPI()
 fs = 100e3
 
 #scope: module i.e. running only once at the start before beginning the first test
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def load_model():
 #Fixture setup code
+
+    mdl.load(filename='microgrid_Data generation.tse')
+    mdl.compile()
+
     hil.load_model(file='microgrid_Data generation Target files\\microgrid_Data generation.cpd', 
                     vhil_device=True, 
                     )
@@ -103,12 +107,8 @@ def load_model():
     
     for key, value in scadaInputs.items():
         hil.set_scada_input_value(scadaInputName=key, value=value)    
-
-#scope:function i.e running before beginning each test
-@pytest.fixture()
-def return_to_default(load_model):
-     
-    #Fixture setup code
+    
+        #Fixture setup code
     hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
                                value=1.0, 
                                )
@@ -128,20 +128,21 @@ def return_to_default(load_model):
                            )
     
     hil.start_simulation()
+    
     yield 
     #Fixture teardown code
     hil.stop_simulation()
     
 """comment whichever faults you do NOT want included in the test"""
 @pytest.mark.parametrize('fault', [ ('Fault infront of WT.enable'),
-                                    #('Fault infront of WT1.enable'), 
-                                    #('Fault infront of PV.enable'),
-                                    #('Fault infront of B.enable'), 
-                                    #('Fault between WTE.enable'),
-                                    #('Fault between WT-BE.enable'),
-                                    #('Fault between WT-BI.enable'),                                    
+                                    ('Fault infront of WT1.enable'), 
+                                    ('Fault infront of PV.enable'),
+                                    ('Fault infront of B.enable'), 
+                                    ('Fault between WTE.enable'),
+                                    ('Fault between WT-BE.enable'),
+                                    ('Fault between WT-BI.enable'),                                    
                                     ])
-def test_faults(return_to_default, fault):
+def test_faults(load_model, fault):
     """
     test different fault locations & measures grid current and voltage
     """
@@ -172,7 +173,7 @@ def test_faults(return_to_default, fault):
     #while (hil.read_analog_signal(name='Diesel Genset (Generic) UI1.Enable_fb')) == 0:
     #    cap.wait(secs=0.5)
 
-    cap.wait(secs=2)
+    cap.wait(secs=20)
     
 #Capture Section    
     #start capture
@@ -210,7 +211,7 @@ def test_faults(return_to_default, fault):
     #line faults
     hil.set_contactor(name=fault, 
                        swControl=True, 
-                       swState=False, 
+                       swState=True, 
                        )
     
     #Fault reperation
