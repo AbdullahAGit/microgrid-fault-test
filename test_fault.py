@@ -17,9 +17,7 @@ def load_model():
 #Fixture setup code
 
     mdl.load(filename='microgrid_Data generation.tse')
-
-    mdl.compile()
-
+    
     hil.load_model(file='microgrid_Data generation Target files\\microgrid_Data generation.cpd', 
                     vhil_device=True, 
                     )
@@ -64,12 +62,12 @@ def load_model():
         'Wind Power Plant (Generic) UI1.MPPT rate of change': 1.0,
         'Wind Power Plant (Generic) UI1.Pcurtailment rate of change': 1.0,
         'Wind Power Plant (Generic) UI1.Qref rate of change': 1.0,
-        "Wind Power Plant (Generic) UI1.Average wind speed max (SC)": 34.0,
-        "Wind Power Plant (Generic) UI1.Cut out wind speed (SC)": 28.0,
-        "Wind Power Plant (Generic) UI1.P reduction wind speed (SC)": 19.0,
-        "Wind Power Plant (Generic) UI1.Wind speed": 17.0,
-        "Wind Power Plant (Generic) UI1.int1 wind speed max": 25.0,
-        "Wind Power Plant (Generic) UI1.int2 wind speed max": 30.0,
+        'Wind Power Plant (Generic) UI1.Average wind speed max (SC)': 34.0,
+        'Wind Power Plant (Generic) UI1.Cut out wind speed (SC)': 28.0,
+        'Wind Power Plant (Generic) UI1.P reduction wind speed (SC)': 19.0,
+        'Wind Power Plant (Generic) UI1.Wind speed': 17.0,
+        'Wind Power Plant (Generic) UI1.int1 wind speed max': 25.0,
+        'Wind Power Plant (Generic) UI1.int2 wind speed max': 30.0,
         'Wind Power Plant (Generic) UI1.time interval (SC)': 600.0,
         'Wind Power Plant (Generic) UI1.time interval 1': 180.0,
         'Wind Power Plant (Generic) UI1.time interval 2': 15.0,
@@ -135,19 +133,39 @@ def load_model():
     hil.stop_simulation()
     
 """comment whichever faults you do NOT want included in the test"""
-@pytest.mark.parametrize('fault', [ ('Fault infront of WT.enable'),
-                                    #('Fault infront of WT1.enable'), 
-                                    #('Fault infront of PV.enable'),
-                                    #('Fault infront of B.enable'), 
-                                    #('Fault between WTE.enable'),
-                                    #('Fault between WT-BE.enable'),
-                                    #('Fault between WT-BI.enable'), 
-                                    ('gridfault'),
+@pytest.mark.parametrize('fault', [ ('Fault infront of WT'),
+                                    #('Fault infront of WT1'), 
+                                    #('Fault infront of PV'),
+                                    #('Fault infront of B'), 
+                                    #('Fault between WTE'),
+                                    #('Fault between WT-BE'),
+                                    #('Fault between WT-BI'), 
+                                    #('gridfault'),
                                     ])
-def test_faults(load_model, fault):
+@pytest.mark.parametrize('resistanceValue', [#(0.1),
+                                        #(0.5),
+                                        (1.0),
+                                        #(5.0),
+                                        #(10.0),
+                                        #(50.0),
+                                        #(100.0),
+                                        ])
+@pytest.mark.parametrize('faultType',  [#('A-GND'),
+                                        #('B-GND'),
+                                        #('C-GND'),
+                                        ('A-B'),
+                                        #('A-C'),
+                                        #('B-C'),
+                                        #('A-B-GND'),
+                                        #('A-C-GND'),
+                                        #('B-C-GND'),
+                                        ('A-B-C'),
+                                        #('A-B-C-GND'),
+                                        ])
+def test_faults(load_model, resistanceValue, faultType, fault):
     """test different fault locations & measures grid current and voltage"""
     
-    print("FAULT SETTINGS")
+    print('FAULT SETTINGS')
     print(hil.get_contactor_settings(name='Fault infront of WT.enable'))
     print(hil.get_contactor_settings(name='Fault infront of WT1.enable'))
     print(hil.get_contactor_settings(name='Fault infront of PV.enable'))
@@ -156,7 +174,7 @@ def test_faults(load_model, fault):
     print(hil.get_contactor_settings(name='Fault between WT-BE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BI.enable'))
     
-    print("BREAKER SETTINGS")
+    print('BREAKER SETTINGS')
     print(hil.get_contactor_settings(name='PCC_monitor.S1'))
     print(hil.get_contactor_settings(name='Battery ESS (Generic)1.Grid Converter1.Contactor.S1'))
     print(hil.get_contactor_settings(name='Wind Power Plant (Generic)1.Grid Converter1.Contactor.S1'))
@@ -164,16 +182,35 @@ def test_faults(load_model, fault):
     print(hil.get_contactor_settings(name='Grid1.Contactor.S1'))
     print(hil.get_contactor_settings(name='Diesel Genset (Generic)1.Diesel genset1.S1'))
     
-    print("SOURCE SETTINGS")
+    print('SOURCE SETTINGS')
     print(hil.get_source_settings(name='Grid1.Vsp_sin1'))
     print(hil.get_source_settings(name='Grid1.Vsp_sin2'))
     print(hil.get_source_settings(name='Grid1.Vsp_sin3'))
     print(hil.get_scada_input_settings(scadaInputName='Grid UI1.Grid_Vrms_cmd'))
 
+#Model Property Changes
+    faultHandle = mdl.get_item(name=fault)
+    print(mdl.get_property_value(mdl.prop(faultHandle,'resistance')))
+    print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
+    
+    mdl.set_property_value(mdl.prop(faultHandle,'resistance'), 
+                            value=resistanceValue, 
+                            )
+                            
+    mdl.set_property_value(mdl.prop(faultHandle,'fault_type'), 
+                            value=faultType, 
+                            )
+    
+    mdl.compile()
+                            
+    print(mdl.get_property_value(mdl.prop(faultHandle,'resistance')))
+    print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
+    
     cap.wait(secs=20)
     
 #Capture Section    
     #start capture
+    
     cap_duration = 2
     time_before_fault = cap_duration/2
     cap.start_capture(duration=cap_duration, 
@@ -205,14 +242,14 @@ def test_faults(load_model, fault):
                                value=0.5, 
                                )
     else:                           
-        hil.set_contactor(name=fault, 
+        hil.set_contactor(name=f'{fault}.enable', 
                            swControl=True, 
                            swState=True, 
                            )
                        
     df = cap.get_capture_results(wait_capture=True)
     
-    print("AFTER CAP")
+    print('AFTER CAP')
     print(hil.get_contactor_settings(name='Fault infront of WT.enable'))
     print(hil.get_contactor_settings(name='Fault infront of WT1.enable'))
     print(hil.get_contactor_settings(name='Fault infront of PV.enable'))
@@ -220,7 +257,8 @@ def test_faults(load_model, fault):
     print(hil.get_contactor_settings(name='Fault between WTE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BI.enable'))
-    print("BREAKER SETTINGS")
+    
+    print('BREAKER SETTINGS')
     print(hil.get_contactor_settings(name='PCC_monitor.S1'))
     print(hil.get_contactor_settings(name='Battery ESS (Generic)1.Grid Converter1.Contactor.S1'))
     print(hil.get_contactor_settings(name='Wind Power Plant (Generic)1.Grid Converter1.Contactor.S1'))
@@ -245,5 +283,3 @@ def plot(df,signals,zoom=None):
         fig.attach_figure([df[sig] for sig in signals], 'Complete') #list comprehension
     else:
         fig.attach_figure([df[sig][zoom[0]:zoom[1]] for sig in signals], f'Zoom ({zoom[0]} to {zoom[1]})')
-
-                      
