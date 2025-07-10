@@ -6,17 +6,32 @@ import typhoon.test.signals as sig
 import typhoon.test.reporting.figures as fig
 from typhoon.api.schematic_editor import SchematicAPI
 
-#module scope i.e. running only once at the start before beginning the first test
 mdl = SchematicAPI()
 
 fs = 100e3
 
-#scope: module i.e. running only once at the start before beginning the first test
-@pytest.fixture()
-def load_model():
+@pytest.fixture(scope='function')
+def load_model(request):
 #Fixture setup code
-
+    
+#Model Property Changes
+    print(request.param)
     mdl.load(filename='microgrid_Data generation.tse')
+
+    #faultHandle = mdl.get_item(name='Fault infront of WT')
+    #print(mdl.get_property_value(mdl.prop(faultHandle,'resistance')))
+    #print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
+    
+    #mdl.set_property_value(mdl.prop(faultHandle,'resistance'), 
+    #                        value=resistanceValue, 
+    #                        )
+                            
+    #mdl.set_property_value(mdl.prop(faultHandle,'fault_type'), 
+    #                        value=request.param, 
+    #                        )
+    #mdl.save()
+    #mdl.compile()
+    
     
     hil.load_model(file='microgrid_Data generation Target files\\microgrid_Data generation.cpd', 
                     vhil_device=True, 
@@ -131,8 +146,28 @@ def load_model():
     yield 
     #Fixture teardown code
     hil.stop_simulation()
-    
-"""comment whichever faults you do NOT want included in the test"""
+                                    
+@pytest.mark.parametrize('resistanceValue', [#(0.1),
+                                            #(0.5),
+                                            (1.0),
+                                            #(5.0),
+                                            #(10.0),
+                                            #(50.0),
+                                            #(100.0),
+                                            ], indirect=True)
+@pytest.mark.parametrize('faultType',  [('A-GND'),
+                                        #('B-GND'),
+                                        #('C-GND'),
+                                        #('A-B'),
+                                        #('A-C'),
+                                        #('B-C'),
+                                        #('A-B-GND'),
+                                        #('A-C-GND'),
+                                        #('B-C-GND'),
+                                        #('A-B-C'),
+                                        #('A-B-C-GND'), 
+                                       ], indirect=True)
+#"""comment whichever faults you do NOT want included in the test"""
 @pytest.mark.parametrize('fault', [ ('Fault infront of WT'),
                                     #('Fault infront of WT1'), 
                                     #('Fault infront of PV'),
@@ -141,27 +176,7 @@ def load_model():
                                     #('Fault between WT-BE'),
                                     #('Fault between WT-BI'), 
                                     #('gridfault'),
-                                    ])
-@pytest.mark.parametrize('resistanceValue', [#(0.1),
-                                        #(0.5),
-                                        (1.0),
-                                        #(5.0),
-                                        #(10.0),
-                                        #(50.0),
-                                        #(100.0),
-                                        ])
-@pytest.mark.parametrize('faultType',  [#('A-GND'),
-                                        #('B-GND'),
-                                        #('C-GND'),
-                                        ('A-B'),
-                                        #('A-C'),
-                                        #('B-C'),
-                                        #('A-B-GND'),
-                                        #('A-C-GND'),
-                                        #('B-C-GND'),
-                                        ('A-B-C'),
-                                        #('A-B-C-GND'),
-                                        ])
+                                    ], indirect=True)
 def test_faults(load_model, resistanceValue, faultType, fault):
     """test different fault locations & measures grid current and voltage"""
     
@@ -187,26 +202,22 @@ def test_faults(load_model, resistanceValue, faultType, fault):
     print(hil.get_source_settings(name='Grid1.Vsp_sin2'))
     print(hil.get_source_settings(name='Grid1.Vsp_sin3'))
     print(hil.get_scada_input_settings(scadaInputName='Grid UI1.Grid_Vrms_cmd'))
-
-#Model Property Changes
-    faultHandle = mdl.get_item(name=fault)
+    
+    print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
+    
+    faultHandle = mdl.get_item(name='Fault infront of WT')
     print(mdl.get_property_value(mdl.prop(faultHandle,'resistance')))
     print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
     
-    mdl.set_property_value(mdl.prop(faultHandle,'resistance'), 
-                            value=resistanceValue, 
-                            )
+    #mdl.set_property_value(mdl.prop(faultHandle,'resistance'), 
+    #                        value=resistanceValue, 
+    #                        )
                             
-    mdl.set_property_value(mdl.prop(faultHandle,'fault_type'), 
-                            value=faultType, 
-                            )
+    #mdl.set_property_value(mdl.prop(faultHandle,'fault_type'), 
+    #                        value=request.param, 
+    #                        )
     
-    mdl.compile()
-                            
-    print(mdl.get_property_value(mdl.prop(faultHandle,'resistance')))
-    print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
-    
-    cap.wait(secs=20)
+    cap.wait(secs=2)
     
 #Capture Section    
     #start capture
