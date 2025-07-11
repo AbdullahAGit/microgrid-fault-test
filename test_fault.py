@@ -11,27 +11,67 @@ mdl = SchematicAPI()
 fs = 100e3
 
 @pytest.fixture(scope='function')
-def load_model(request):
-#Fixture setup code
+def set_fault_type(request):
+#Fixture Setup
+
+    yield request.param
+#Fixture Teardown
+
+    pass
+
+@pytest.fixture(scope='function')
+def set_fault(request):
+#Fixture Setup
+
+    yield request.param
+#Fixture Teardown
+
+    pass
+
+@pytest.fixture(scope='function')
+def set_fault_resistance(request):
+#Fixture Setup
+
+    yield request.param
+#Fixture Teardown
+
+    pass
+
+
+
+@pytest.fixture(scope='function')
+def load_model(set_fault_resistance, set_fault, set_fault_type):
+#Fixture setup
     
 #Model Property Changes
-    print(request.param)
     mdl.load(filename='microgrid_Data generation.tse')
 
-    #faultHandle = mdl.get_item(name='Fault infront of WT')
-    #print(mdl.get_property_value(mdl.prop(faultHandle,'resistance')))
-    #print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
+    faultHandle = mdl.get_item(name=set_fault)
     
-    #mdl.set_property_value(mdl.prop(faultHandle,'resistance'), 
-    #                        value=resistanceValue, 
-    #                        )
+    print(mdl.get_property_value(mdl.prop(faultHandle,'resistance')))
+    print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
+    
+    mdl.set_property_value(mdl.prop(faultHandle,'resistance'), 
+                            value=set_fault_resistance, 
+                            )
                             
-    #mdl.set_property_value(mdl.prop(faultHandle,'fault_type'), 
-    #                        value=request.param, 
-    #                        )
-    #mdl.save()
-    #mdl.compile()
+    mdl.set_property_value(mdl.prop(faultHandle,'fault_type'), 
+                            value=set_fault_type, 
+                            )
     
+    get_fault_gnd = mdl.get_item('fault_gnd', item_type='component')
+    if get_fault_gnd:
+        mdl.delete_item(get_fault_gnd)
+    
+    if "GND" in set_fault_type:
+        fault_gnd = mdl.create_component(
+                'core/Ground',
+                name='fault_gnd',
+                position = mdl.get_position(faultHandle)
+                )
+        mdl.create_connection(mdl.term(faultHandle, 'GND'), mdl.term(fault_gnd, 'node'))
+    mdl.save()
+    mdl.compile()
     
     hil.load_model(file='microgrid_Data generation Target files\\microgrid_Data generation.cpd', 
                     vhil_device=True, 
@@ -129,33 +169,23 @@ def load_model(request):
     hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_freq_cmd',
                                 value=1.0,
                                 )
-                                
-    faults =  ['Fault infront of WT.enable', 'Fault infront of WT1.enable', 
-                'Fault infront of PV.enable', 'Fault infront of B.enable', 
-                'Fault between WTE.enable', 'Fault between WT-BE.enable', 
-                'Fault between WT-BI.enable']
-    
-    for fault in faults:
-        hil.set_contactor(name=fault, 
-                           swControl=True, 
-                           swState=False, 
-                           )
     
     hil.start_simulation()
     
     yield 
-    #Fixture teardown code
+    #Fixture Teardown
+    
     hil.stop_simulation()
                                     
-@pytest.mark.parametrize('resistanceValue', [#(0.1),
-                                            #(0.5),
-                                            (1.0),
-                                            #(5.0),
-                                            #(10.0),
-                                            #(50.0),
-                                            #(100.0),
-                                            ], indirect=True)
-@pytest.mark.parametrize('faultType',  [('A-GND'),
+@pytest.mark.parametrize('set_fault_resistance', [  (0.1),
+                                                    #(0.5),
+                                                    #(1.0),
+                                                    #(5.0),
+                                                    #(10.0),
+                                                    #(50.0),
+                                                    (100.0),
+                                                    ], indirect=True)
+@pytest.mark.parametrize('set_fault_type',  [('A-GND'),
                                         #('B-GND'),
                                         #('C-GND'),
                                         #('A-B'),
@@ -168,7 +198,7 @@ def load_model(request):
                                         #('A-B-C-GND'), 
                                        ], indirect=True)
 #"""comment whichever faults you do NOT want included in the test"""
-@pytest.mark.parametrize('fault', [ ('Fault infront of WT'),
+@pytest.mark.parametrize('set_fault', [ ('Fault infront of WT'),
                                     #('Fault infront of WT1'), 
                                     #('Fault infront of PV'),
                                     #('Fault infront of B'), 
@@ -177,8 +207,12 @@ def load_model(request):
                                     #('Fault between WT-BI'), 
                                     #('gridfault'),
                                     ], indirect=True)
-def test_faults(load_model, resistanceValue, faultType, fault):
+def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     """test different fault locations & measures grid current and voltage"""
+    
+    fault = set_fault
+    faultType = set_fault_type
+    faultHandle = mdl.get_item(name=fault)
     
     print('FAULT SETTINGS')
     print(hil.get_contactor_settings(name='Fault infront of WT.enable'))
@@ -188,6 +222,9 @@ def test_faults(load_model, resistanceValue, faultType, fault):
     print(hil.get_contactor_settings(name='Fault between WTE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BI.enable'))
+    print(mdl.get_property_value(mdl.prop(faultHandle,'resistance')))
+    print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
+    print(fault)
     
     print('BREAKER SETTINGS')
     print(hil.get_contactor_settings(name='PCC_monitor.S1'))
@@ -203,21 +240,8 @@ def test_faults(load_model, resistanceValue, faultType, fault):
     print(hil.get_source_settings(name='Grid1.Vsp_sin3'))
     print(hil.get_scada_input_settings(scadaInputName='Grid UI1.Grid_Vrms_cmd'))
     
-    print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
     
-    faultHandle = mdl.get_item(name='Fault infront of WT')
-    print(mdl.get_property_value(mdl.prop(faultHandle,'resistance')))
-    print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
-    
-    #mdl.set_property_value(mdl.prop(faultHandle,'resistance'), 
-    #                        value=resistanceValue, 
-    #                        )
-                            
-    #mdl.set_property_value(mdl.prop(faultHandle,'fault_type'), 
-    #                        value=request.param, 
-    #                        )
-    
-    cap.wait(secs=2)
+    cap.wait(secs=20)
     
 #Capture Section    
     #start capture
