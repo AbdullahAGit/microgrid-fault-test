@@ -1,5 +1,6 @@
 import pytest
 import math
+import os
 import typhoon.api.hil as hil
 import typhoon.test.capture as cap
 import typhoon.test.signals as sig
@@ -76,19 +77,6 @@ def load_model(set_fault_resistance, set_fault, set_fault_type):
     hil.load_model(file='microgrid_Data generation Target files\\microgrid_Data generation.cpd', 
                     vhil_device=True, 
                     )
-    
-    #Source Inputs
-    """
-    hil.set_source_sine_waveform(name='Grid1.Vsp_sin1', 
-                                  rms=math.sqrt(2), 
-                                  )
-    hil.set_source_sine_waveform(name='Grid1.Vsp_sin2', 
-                                  rms=math.sqrt(2), 
-                                  )
-    hil.set_source_sine_waveform(name='Grid1.Vsp_sin3', 
-                                  rms=math.sqrt(2), 
-                                  )                              
-    """
     #Grid Inputs
     inputs_grid = {
         'Grid UI1.Connect': 1.0,
@@ -162,7 +150,6 @@ def load_model(set_fault_resistance, set_fault, set_fault_type):
     for key, value in scadaInputs.items():
         hil.set_scada_input_value(scadaInputName=key, value=value)    
     
-        #Fixture setup code
     hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
                                value=1.0, 
                                )
@@ -181,34 +168,34 @@ def load_model(set_fault_resistance, set_fault, set_fault_type):
                                                     #(0.5),
                                                     #(1.0),
                                                     #(5.0),
-                                                    #(10.0),
+                                                    (10.0),
+                                                    (40.0),
                                                     #(50.0),
-                                                    (100.0),
+                                                    #(100.0),
                                                     ], indirect=True)
-@pytest.mark.parametrize('set_fault_type',  [('A-GND'),
-                                        #('B-GND'),
-                                        #('C-GND'),
-                                        #('A-B'),
-                                        #('A-C'),
-                                        #('B-C'),
-                                        #('A-B-GND'),
-                                        #('A-C-GND'),
-                                        #('B-C-GND'),
-                                        #('A-B-C'),
-                                        #('A-B-C-GND'), 
+@pytest.mark.parametrize('set_fault_type',  [#('A-GND'),
+                                            #('B-GND'),
+                                            #('C-GND'),
+                                            #('A-B'),
+                                            #('A-C'),
+                                            #('B-C'),
+                                            #('A-B-GND'),
+                                            #('A-C-GND'),
+                                            #('B-C-GND'),
+                                            ('A-B-C'),
+                                            #('A-B-C-GND'), 
                                        ], indirect=True)
-#"""comment whichever faults you do NOT want included in the test"""
-@pytest.mark.parametrize('set_fault', [ ('Fault infront of WT'),
-                                    #('Fault infront of WT1'), 
-                                    #('Fault infront of PV'),
-                                    #('Fault infront of B'), 
-                                    #('Fault between WTE'),
-                                    #('Fault between WT-BE'),
-                                    #('Fault between WT-BI'), 
-                                    #('gridfault'),
+                                       
+@pytest.mark.parametrize('set_fault', [ #('Fault infront of WT'),
+                                        ('Fault infront of WT1'), 
+                                        #('Fault infront of PV'),
+                                        #('Fault infront of B'), 
+                                        #('Fault between WTE'),
+                                        ('Fault between WT-BE'),
+                                        ('Fault between WT-BI'), 
                                     ], indirect=True)
 def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
-    """test different fault locations & measures grid current and voltage"""
+    """test different microgrid fault locations & measures grid current and voltage"""
     
     fault = set_fault
     faultType = set_fault_type
@@ -241,6 +228,84 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     print(hil.get_scada_input_settings(scadaInputName='Grid UI1.Grid_Vrms_cmd'))
     
     
+    cap.wait(secs=2)
+    
+#Capture Section    
+    #start capture
+    
+    cap_duration = 1
+    time_before_fault = cap_duration/2
+    cap.start_capture(duration=cap_duration, 
+                       rate=fs, 
+                       signals=[
+
+                            'Grid1.Vc', 'Grid1.Vb', 'Grid1.Va',
+                            'PCC_monitor.S1_fb', 
+                            'Grid1.Ic', 'Grid1.Ib', 'Grid1.Ia',
+                            'Subsystem BSS.IA', 'Subsystem BSS.IB', 'Subsystem BSS.IC',
+                            'PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc',
+                            'PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC',
+                            'Grid UI1.Vrms_meas_kV', 'Grid UI1.Qmeas_kVAr', 'Grid UI1.Pmeas_kW',
+                            'Wind Power Plant (Generic) UI1.Pmeas_kW', 'PV Power Plant (Generic) UI1.Pmeas_kW',
+                            'Battery ESS (Generic) UI1.Pmeas_kW', 'Diesel Genset (Generic) UI1.Pmeas_kW',
+                            'PCC_monitor.Synch_check.PLLs.VABC', 'PCC_monitor.Synch_check.PLLs.Vabc'
+                            #'Wind Power Plant (Generic) UI1.wind_speed_m_per_s',
+                            #'Wind Power Plant (Generic) UI1.MCB_status', 'PV Power Plant (Generic) UI1.MCB_status',
+                            #'Diesel Genset (Generic) UI1.MCB_status', 'Battery ESS (Generic) UI1.MCB_status',
+                       ],)
+                       
+    print(hil.read_analog_signal(name='PCC_monitor.VA'))
+    print(hil.read_analog_signal(name='PCC_monitor.Va'))
+    
+#Fault Section (halfway after cap starts)                  
+    cap.wait(secs=time_before_fault)
+ 
+    hil.set_contactor(name=f'{fault}.enable', 
+                           swControl=True, 
+                           swState=True, 
+                           )
+                        
+    df = cap.get_capture_results(wait_capture=True)
+    
+    print('AFTER CAP')
+    print(hil.get_contactor_settings(name='Fault infront of WT.enable'))
+    print(hil.get_contactor_settings(name='Fault infront of WT1.enable'))
+    print(hil.get_contactor_settings(name='Fault infront of PV.enable'))
+    print(hil.get_contactor_settings(name='Fault infront of B.enable'))
+    print(hil.get_contactor_settings(name='Fault between WTE.enable'))
+    print(hil.get_contactor_settings(name='Fault between WT-BE.enable'))
+    print(hil.get_contactor_settings(name='Fault between WT-BI.enable'))
+    
+    print('BREAKER SETTINGS')
+    print(hil.get_contactor_settings(name='PCC_monitor.S1'))
+    print(hil.get_contactor_settings(name='Battery ESS (Generic)1.Grid Converter1.Contactor.S1'))
+    print(hil.get_contactor_settings(name='Wind Power Plant (Generic)1.Grid Converter1.Contactor.S1'))
+    print(hil.get_contactor_settings(name='PV Power Plant (Generic)1.Grid Converter1.Contactor.S1'))
+    print(hil.get_contactor_settings(name='Grid1.Contactor.S1'))
+    print(hil.get_contactor_settings(name='Diesel Genset (Generic)1.Diesel genset1.S1'))
+    
+    signals = [
+                ['Grid1.Ic', 'Grid1.Ib', 'Grid1.Ia'],
+                
+                ['PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc'],
+                ['PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC'],
+                ['Grid UI1.Pmeas_kW','Wind Power Plant (Generic) UI1.Pmeas_kW','PV Power Plant (Generic) UI1.Pmeas_kW',
+                'Battery ESS (Generic) UI1.Pmeas_kW', 'Diesel Genset (Generic) UI1.Pmeas_kW'],
+                ['PCC_monitor.Synch_check.PLLs.VABC','PCC_monitor.Synch_check.PLLs.Vabc'],]
+              
+    plot(df, signals)
+    
+    df.index = df.index.total_seconds()
+    df_subsystemBSS = df[['Subsystem BSS.IA','Subsystem BSS.IB', 'Subsystem BSS.IC']]
+    df_subsystemBSS.to_csv(f'test_fault_results/subsystembss-currents-{set_fault}-{set_fault_type}-{set_fault_resistance}.csv')
+
+"""
+
+@pytest.mark.parametrize('set_fault_resistance', [(0.1),], indirect=True)
+@pytest.mark.parametrize('set_fault', [ ('Fault infront of WT'),], indirect=True)
+@pytest.mark.parametrize('set_fault_type',  [('A-GND'),], indirect=True)
+def test_grid_fault(load_model, set_fault_resistance, set_fault_type, set_fault):
+    
     cap.wait(secs=20)
     
 #Capture Section    
@@ -271,35 +336,11 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     
 #Fault Section (halfway after cap starts)                  
     cap.wait(secs=time_before_fault)
- 
-    if  (fault == 'gridfault'):
-            hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
-                               value=0.5, 
-                               )
-    else:                           
-        hil.set_contactor(name=f'{fault}.enable', 
-                           swControl=True, 
-                           swState=True, 
-                           )
-                       
+    hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
+                       value=0.5, 
+                       )
+    
     df = cap.get_capture_results(wait_capture=True)
-    
-    print('AFTER CAP')
-    print(hil.get_contactor_settings(name='Fault infront of WT.enable'))
-    print(hil.get_contactor_settings(name='Fault infront of WT1.enable'))
-    print(hil.get_contactor_settings(name='Fault infront of PV.enable'))
-    print(hil.get_contactor_settings(name='Fault infront of B.enable'))
-    print(hil.get_contactor_settings(name='Fault between WTE.enable'))
-    print(hil.get_contactor_settings(name='Fault between WT-BE.enable'))
-    print(hil.get_contactor_settings(name='Fault between WT-BI.enable'))
-    
-    print('BREAKER SETTINGS')
-    print(hil.get_contactor_settings(name='PCC_monitor.S1'))
-    print(hil.get_contactor_settings(name='Battery ESS (Generic)1.Grid Converter1.Contactor.S1'))
-    print(hil.get_contactor_settings(name='Wind Power Plant (Generic)1.Grid Converter1.Contactor.S1'))
-    print(hil.get_contactor_settings(name='PV Power Plant (Generic)1.Grid Converter1.Contactor.S1'))
-    print(hil.get_contactor_settings(name='Grid1.Contactor.S1'))
-    print(hil.get_contactor_settings(name='Diesel Genset (Generic)1.Diesel genset1.S1'))
     
     signals = [
                 ['Grid1.Ic', 'Grid1.Ib', 'Grid1.Ia'],
@@ -309,10 +350,16 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
                 'Battery ESS (Generic) UI1.Pmeas_kW', 'Diesel Genset (Generic) UI1.Pmeas_kW'],
                 ['PCC_monitor.Synch_check.PLLs.VABC','PCC_monitor.Synch_check.PLLs.Vabc'],
               ]
+              
     plot(df, signals)
-#Assert Section 
+    
+    df.index = df.index.total_seconds()
+    df['Grid1.Ia'].to_csv(f'test_fault_results/grid-current-ia-{set_fault}-{set_fault_type}-{set_fault_resistance}.csv')                 
+
+"""
 
 #Misc Functions
+
 def plot(df,signals,zoom=None):
     if zoom is None:
         fig.attach_figure([df[sig] for sig in signals], 'Complete') #list comprehension
