@@ -228,7 +228,7 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     print(hil.get_scada_input_settings(scadaInputName='Grid UI1.Grid_Vrms_cmd'))
     
     
-    cap.wait(secs=2)
+    cap.wait(secs=20)
     
 #Capture Section    
     #start capture
@@ -289,6 +289,7 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
                 
                 ['PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc'],
                 ['PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC'],
+                ['Subsystem BSS.IA', 'Subsystem BSS.IB', 'Subsystem BSS.IC'],
                 ['Grid UI1.Pmeas_kW','Wind Power Plant (Generic) UI1.Pmeas_kW','PV Power Plant (Generic) UI1.Pmeas_kW',
                 'Battery ESS (Generic) UI1.Pmeas_kW', 'Diesel Genset (Generic) UI1.Pmeas_kW'],
                 ['PCC_monitor.Synch_check.PLLs.VABC','PCC_monitor.Synch_check.PLLs.Vabc'],]
@@ -296,8 +297,7 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     plot(df, signals)
     
     df.index = df.index.total_seconds()
-    df_subsystemBSS = df[['Subsystem BSS.IA','Subsystem BSS.IB', 'Subsystem BSS.IC']]
-    df_subsystemBSS.to_csv(f'test_fault_results/subsystembss-currents-{set_fault}-{set_fault_type}-{set_fault_resistance}.csv')
+    df[['Subsystem BSS.IA','Subsystem BSS.IB', 'Subsystem BSS.IC']].to_csv(f'test_fault_results/subsystembss-currents-{set_fault}-{set_fault_type}-{set_fault_resistance}.csv')
 
 """
 
