@@ -164,12 +164,14 @@ def load_model(set_fault_resistance, set_fault, set_fault_type):
     
     hil.stop_simulation()
                                     
-@pytest.mark.parametrize('set_fault_resistance', [  (0.1),
+@pytest.mark.parametrize('set_fault_resistance', [  (1.0),
+                                                    (2.0),(3.0),(4.0),(5.0),(6.0),(7.0),(8.0),(9.0),
+                                                    (10.0),
                                                     #(0.5),
                                                     #(1.0),
                                                     #(5.0),
-                                                    (10.0),
-                                                    (40.0),
+                                                    #(10.0),
+                                                    #(40.0),
                                                     #(50.0),
                                                     #(100.0),
                                                     ], indirect=True)
@@ -187,12 +189,15 @@ def load_model(set_fault_resistance, set_fault, set_fault_type):
                                        ], indirect=True)
                                        
 @pytest.mark.parametrize('set_fault', [ #('Fault infront of WT'),
-                                        ('Fault infront of WT1'), 
+                                        #('Fault infront of WT1'), 
                                         #('Fault infront of PV'),
                                         #('Fault infront of B'), 
-                                        #('Fault between WTE'),
+                                        ('Fault between WTE'),
                                         ('Fault between WT-BE'),
-                                        ('Fault between WT-BI'), 
+                                        ('Fault between WT-BI'),
+                                        ('Fault between C1-C2'),
+                                        ('Fault between DG'),
+                                        ('Fault between WT-B'),
                                     ], indirect=True)
 def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     """test different microgrid fault locations & measures grid current and voltage"""
@@ -243,6 +248,8 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
                             'PCC_monitor.S1_fb', 
                             'Grid1.Ic', 'Grid1.Ib', 'Grid1.Ia',
                             'Subsystem BSS.IA', 'Subsystem BSS.IB', 'Subsystem BSS.IC',
+                            'Subsystem WT-B.IA', 'Subsystem WT-B.IB', 'Subsystem WT-B.IC',
+                            'Subsystem WT-B.VAn', 'Subsystem WT-B.VBn', 'Subsystem WT-B.VCn',
                             'PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc',
                             'PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC',
                             'Grid UI1.Vrms_meas_kV', 'Grid UI1.Qmeas_kVAr', 'Grid UI1.Pmeas_kW',
@@ -286,10 +293,11 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     
     signals = [
                 ['Grid1.Ic', 'Grid1.Ib', 'Grid1.Ia'],
-                
                 ['PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc'],
                 ['PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC'],
                 ['Subsystem BSS.IA', 'Subsystem BSS.IB', 'Subsystem BSS.IC'],
+                ['Subsystem WT-B.IA', 'Subsystem WT-B.IB', 'Subsystem WT-B.IC'],
+                ['Subsystem WT-B.VAn', 'Subsystem WT-B.VBn', 'Subsystem WT-B.VCn'],
                 ['Grid UI1.Pmeas_kW','Wind Power Plant (Generic) UI1.Pmeas_kW','PV Power Plant (Generic) UI1.Pmeas_kW',
                 'Battery ESS (Generic) UI1.Pmeas_kW', 'Diesel Genset (Generic) UI1.Pmeas_kW'],
                 ['PCC_monitor.Synch_check.PLLs.VABC','PCC_monitor.Synch_check.PLLs.Vabc'],]
@@ -297,67 +305,8 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     plot(df, signals)
     
     df.index = df.index.total_seconds()
-    df[['Subsystem BSS.IA','Subsystem BSS.IB', 'Subsystem BSS.IC']].to_csv(f'test_fault_results/subsystembss-currents-{set_fault}-{set_fault_type}-{set_fault_resistance}.csv')
-
-"""
-
-@pytest.mark.parametrize('set_fault_resistance', [(0.1),], indirect=True)
-@pytest.mark.parametrize('set_fault', [ ('Fault infront of WT'),], indirect=True)
-@pytest.mark.parametrize('set_fault_type',  [('A-GND'),], indirect=True)
-def test_grid_fault(load_model, set_fault_resistance, set_fault_type, set_fault):
+    df[['Subsystem WT-B.IA', 'Subsystem WT-B.IB', 'Subsystem WT-B.IC'],['Subsystem WT-B.VAn', 'Subsystem WT-B.VBn', 'Subsystem WT-B.VCn']].to_csv(f'test_fault_results/subsystemwtb-ABC-{set_fault}-{set_fault_type}-{set_fault_resistance}.csv')
     
-    cap.wait(secs=20)
-    
-#Capture Section    
-    #start capture
-    
-    cap_duration = 2
-    time_before_fault = cap_duration/2
-    cap.start_capture(duration=cap_duration, 
-                       rate=fs, 
-                       signals=[
-
-                            'Grid1.Vc', 'Grid1.Vb', 'Grid1.Va',
-                            'PCC_monitor.S1_fb', 
-                            'Grid1.Ic', 'Grid1.Ib', 'Grid1.Ia',
-                            'PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc',
-                            'PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC',
-                            'Grid UI1.Vrms_meas_kV', 'Grid UI1.Qmeas_kVAr', 'Grid UI1.Pmeas_kW',
-                            'Wind Power Plant (Generic) UI1.Pmeas_kW', 'PV Power Plant (Generic) UI1.Pmeas_kW',
-                            'Battery ESS (Generic) UI1.Pmeas_kW', 'Diesel Genset (Generic) UI1.Pmeas_kW',
-                            'PCC_monitor.Synch_check.PLLs.VABC', 'PCC_monitor.Synch_check.PLLs.Vabc'
-                            #'Wind Power Plant (Generic) UI1.wind_speed_m_per_s',
-                            #'Wind Power Plant (Generic) UI1.MCB_status', 'PV Power Plant (Generic) UI1.MCB_status',
-                            #'Diesel Genset (Generic) UI1.MCB_status', 'Battery ESS (Generic) UI1.MCB_status',
-                       ],)
-                       
-    print(hil.read_analog_signal(name='PCC_monitor.VA'))
-    print(hil.read_analog_signal(name='PCC_monitor.Va'))
-    
-#Fault Section (halfway after cap starts)                  
-    cap.wait(secs=time_before_fault)
-    hil.set_scada_input_value(scadaInputName='Grid UI1.Grid_Vrms_cmd', 
-                       value=0.5, 
-                       )
-    
-    df = cap.get_capture_results(wait_capture=True)
-    
-    signals = [
-                ['Grid1.Ic', 'Grid1.Ib', 'Grid1.Ia'],
-                ['PCC_monitor.Va', 'PCC_monitor.Vb', 'PCC_monitor.Vc'],
-                ['PCC_monitor.VA', 'PCC_monitor.VB', 'PCC_monitor.VC'],
-                ['Grid UI1.Pmeas_kW','Wind Power Plant (Generic) UI1.Pmeas_kW','PV Power Plant (Generic) UI1.Pmeas_kW',
-                'Battery ESS (Generic) UI1.Pmeas_kW', 'Diesel Genset (Generic) UI1.Pmeas_kW'],
-                ['PCC_monitor.Synch_check.PLLs.VABC','PCC_monitor.Synch_check.PLLs.Vabc'],
-              ]
-              
-    plot(df, signals)
-    
-    df.index = df.index.total_seconds()
-    df['Grid1.Ia'].to_csv(f'test_fault_results/grid-current-ia-{set_fault}-{set_fault_type}-{set_fault_resistance}.csv')                 
-
-"""
-
 #Misc Functions
 
 def plot(df,signals,zoom=None):
