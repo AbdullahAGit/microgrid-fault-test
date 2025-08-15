@@ -164,9 +164,10 @@ def load_model(set_fault_resistance, set_fault, set_fault_type):
     
     hil.stop_simulation()
                                     
-@pytest.mark.parametrize('set_fault_resistance', [  (1.0),
-                                                    (2.0),(3.0),(4.0),(5.0),(6.0),(7.0),(8.0),(9.0),
-                                                    (10.0),
+@pytest.mark.parametrize('set_fault_resistance', [  #(1.0),
+                                                    #(2.0),(3.0),(4.0),(5.0),(6.0),(7.0),(8.0),(9.0),
+                                                    #(10.0),
+                                                    (7.0),
                                                     #(0.5),
                                                     #(1.0),
                                                     #(5.0),
@@ -192,12 +193,12 @@ def load_model(set_fault_resistance, set_fault, set_fault_type):
                                         #('Fault infront of WT1'), 
                                         #('Fault infront of PV'),
                                         #('Fault infront of B'), 
-                                        ('Fault between WTE'),
-                                        ('Fault between WT-BE'),
+                                        #('Fault between WTE'),
+                                        #('Fault between WT-BE'),
                                         ('Fault between WT-BI'),
-                                        ('Fault between C1-C2'),
-                                        ('Fault between DG'),
-                                        ('Fault between WT-B'),
+                                        #('Fault between C1-C2'),
+                                        #('Fault between DG'),
+                                        #('Fault between WT-B'),
                                     ], indirect=True)
 def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     """test different microgrid fault locations & measures grid current and voltage"""
@@ -214,6 +215,9 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     print(hil.get_contactor_settings(name='Fault between WTE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BI.enable'))
+    print(hil.get_contactor_settings(name='Fault between C1-C2.enable'))
+    print(hil.get_contactor_settings(name='Fault between DG.enable'))
+    print(hil.get_contactor_settings(name='Fault between WT-B.enable'))
     print(mdl.get_property_value(mdl.prop(faultHandle,'resistance')))
     print(mdl.get_property_value(mdl.prop(faultHandle,'fault_type')))
     print(fault)
@@ -282,6 +286,9 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     print(hil.get_contactor_settings(name='Fault between WTE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BE.enable'))
     print(hil.get_contactor_settings(name='Fault between WT-BI.enable'))
+    print(hil.get_contactor_settings(name='Fault between C1-C2.enable'))
+    print(hil.get_contactor_settings(name='Fault between DG.enable'))
+    print(hil.get_contactor_settings(name='Fault between WT-B.enable'))
     
     print('BREAKER SETTINGS')
     print(hil.get_contactor_settings(name='PCC_monitor.S1'))
@@ -305,7 +312,7 @@ def test_faults(load_model, set_fault_resistance, set_fault_type, set_fault):
     plot(df, signals)
     
     df.index = df.index.total_seconds()
-    df[['Subsystem WT-B.IA', 'Subsystem WT-B.IB', 'Subsystem WT-B.IC'],['Subsystem WT-B.VAn', 'Subsystem WT-B.VBn', 'Subsystem WT-B.VCn']].to_csv(f'test_fault_results/subsystemwtb-ABC-{set_fault}-{set_fault_type}-{set_fault_resistance}.csv')
+    df[['Subsystem WT-B.IA', 'Subsystem WT-B.IB', 'Subsystem WT-B.IC','Subsystem WT-B.VAn', 'Subsystem WT-B.VBn', 'Subsystem WT-B.VCn']].to_csv(f'test_fault_results/subsystemwtb/WT-B-ABC-{set_fault}-{set_fault_type}-{set_fault_resistance}.csv')
     
 #Misc Functions
 
