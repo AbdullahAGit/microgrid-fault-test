@@ -1,0 +1,218 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+
+\newcommand{\imageheight}{2cm}
+
+\newcommand{\centerimage}[2]{%
+    \begin{center}
+        \centerline{\includegraphics[height=#2]{#1}}
+    \end{center}%
+}
+
+\title{Instructions for test\_fault.py}
+\author{Abdullah Alsafar}
+\date{August 2025}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Notes}
+\begin{enumerate}
+    \item The \textbf{test\_fault.py} file can be found here: \\ https://github.com/AbdullahAGit/microgrid-fault-test
+    \item It is meant to be used with the Typhoon HIL schematic named \\ \textbf{"microgrid\_Data generation.tse"}
+    \item Feel free to contact me at abdullah.alsafar@torontomu.ca if you have any questions
+\end{enumerate}
+\section{Introduction}
+Typhoon HIL provides a testing software TyphoonTest which can be used in conjunction with  Typhoon HIL schematics. TyphoonTest uses a mix of the pytest framework as well as their own APIs which has documentation and can be found at:
+\begin{itemize}
+    \item https://www.typhoon-hil.com/documentation/typhoon-hil-api-documentation/typhoon\_api.html
+    \item https://www.typhoon-hil.com/documentation/typhoon-hil-typhoontest-library/
+\end{itemize}
+
+\noindent These links are also available in the "Help" section on the Typhoon HIL Control Center.\\
+
+\noindent You can also find the pytest documentation here:
+\begin{itemize}
+    \item https://docs.pytest.org/en/stable/index.html
+\end{itemize}
+
+This document will serve as an explanation for some beginner pytest features such as scopes, fixtures and test cases as well as go in to detail about how the \textbf{test\_fault.py} file works. For more information on Typhoon HIL and TyphoonTest, the learning modules provided by HIL Academy are an excellent source:
+\begin{itemize}
+    \item https://hil.academy/
+\end{itemize}
+
+\section{Pytest Basics}
+
+The \textbf{test\_fault.py} file makes use of 2 simple pytest features: test cases and fixtures. 
+
+\begin{itemize}
+
+    \item Test cases are usually parameterized and dictate what happens while the test is occuring. In the TyphoonTest IDE, the runtime of tests is shown under the "Test" Section.
+    
+    \item  Fixtures, on the other hand, are commonly used to setup and teardown i.e. before a test starts and after a test finishes. This, in the context of Typhoon HIL, can include things such as loading the model, starting the simulation, setting fixed variables (that is, they will not change in the middle of a test) and stopping the simulation.
+    
+\end{itemize}
+
+Fixtures contain a scope which can define when you want them to run. For example, a fixture with the \textit{'function'} scope occurs for each and every test case. However, a fixture with the \textit{'module'} scope occurs only once per module which usually means that the fixture setup occurs before the first test and the fixture teardown occurs after the last test. Fixtures are activated upon being called by other tests in their parameters. In fact, fixtures can even be called by other fixtures in their parameters, which is useful because you can chain fixtures together, as in: 
+
+\begin{itemize}
+
+    \item The test case calls a fixture that runs for every test with the \textit{function} scope, and that fixture calls another fixture that runs once for all tests with the \textit{module} scope.
+    
+\end{itemize}
+
+\section{test\_fault.py}
+
+\subsection{load\_model Fixture}
+
+ For test\_fault.py, there are 4 fixtures and 1 test case. All 4 fixtures have the \textit{'function'} scope and so they occur for each and every test. The \textbf{load\_model} fixture is responsible for:
+ 
+\begin{enumerate}
+    \item Loading the schematic model .tse file
+    \item Setting the fault\_resistance and fault\_type property values on the enabled faults
+    \begin{itemize}
+        \item Some fault types require a connection to GND and some others do not. So, the fixture is also responsible for connecting the enabled faults to GND if required, which also means creating a "GND" object near the position of the fault in the schematic. This is what these lines are for:
+        \centerimage{gndcomponent.png}{\imageheight}
+    \end{itemize}
+    \item Saving the changes and compiling the model
+    \item Loading the compiled .cpd model
+    \item Setting all fixed inputs such as:
+    \begin{itemize}
+        \item The operation mode of the Diesel Genset and Battery ESS
+        \item The average, max and min wind speed for the Wind Turbine
+        \item The grid vrms\_cmd and grid freq\_cmd to 1 
+        \item The rates of change for all subsystems
+        \item Enabling all subsystems and microgrid controller
+    \end{itemize}
+    \item Starting the simulation and, during fixture teardown, stopping the simulation
+\end{enumerate}
+
+All of the steps listed occur during the "setup" stage of the fixture, except for stopping the simulation, which occurs during the "teardown" stage of the fixture which can be seen here: 
+    \centerimage{startandstop.png}{\imageheight}
+    
+As a note, the \textit{yield} keyword determines the boundary between the setup and teardown of a fixture. It can also return variables.
+
+\subsection{test\_faults Test Case}
+The test\_faults test case has 3 parameters: 
+\begin{itemize}
+    \item \textbf{set\_fault\_resistance}
+    \item \textbf{set\_fault\_type}
+    \item \textbf{set\_fault}
+\end{itemize}
+
+Other values can be added to \textbf{set\_fault\_resistance} but for \textbf{set\_fault\_type} the fault type must be available in the drop-down menu for faults in the schematic. For \textbf{set\_fault} the fault name must be an existing fault in the schematic. This means that if you want to simulate a fault in a specific location, that location must have a fault object in the schematic; otherwise, you need to add a "\textit{Grid Fault}" object yourself. In case there are obsolete parameters, it is recommended to comment them out instead of removing them in case you ever need them again. \\
+
+For these parameters, every unique combination is run by \textbf{test\_faults}. The order is decided by the order they are called in by the \textbf{test\_faults} function: 
+
+\centerimage{functioncall.png}{0.4cm}
+
+According to the order, all resistances will be tested for each fault type, and all fault types will be tested for each fault that has been enabled. Therefore, while testing, the next fault will only begin when all other combinations for the test case before that have ran. \\
+
+There are many print statements throughout the \textbf{test\_faults} section. These are present just for troubleshooting purposes and ensuring the desired output is achieved. The \textbf{load\_model} fixture setup has already finished running before the test case started, so the simulation is already on at this point. \\
+
+Before beginning capturing all desired signals, the simulation waits 20 seconds. This is important because the specific model \textbf{microgrid\_Data generation.tse} requires a little less than 20 seconds to reach steady state. After the 20 seconds are finished, the capture begins. 
+
+\centerimage{capturesignals.png}{7cm}
+
+\begin{itemize}
+    \item The \textit{cap\_duration} variable defines how long the capture lasts for in seconds. In this case, it is 1 second.
+    
+    \item The \textit{time\_before\_fault} variable defines the time before the fault is enabled. In this case, it is half of the cap duration, so the fault occurs halfway through the capture. 
+    
+    \item The \textit{rate} defines the frequency at which the selected signals are sampled. The variable \textit{fs} was set at the beginning of the script to be 100e3 and so the signals are sampled every 1/100e3 or 0.00001 seconds. Increase or decrease this number to change the resolution of the capture.
+    
+    \item The \textit{signals} list defines all signals that are to be captured. The signals in the list must have their appropriate schematic  names; otherwise, the capture returns an error.
+    
+\end{itemize}
+Note: 
+\begin{itemize}
+    \item An easy way to find the correct name for signals is by using the API Wizard's "Choose" button on a value after selecting any API function. The API Wizard is also helpful for inserting other API functions like \textit{set\_contactor} and \textit{start\_capture}. A tutorial on how to use the API Wizard and other TyphoonTest features is available on HIL Academy. 
+\centerimage{choose.png}{10cm}
+\centerimage{signaldropdown.png}{7cm}
+    \item All signals are listed in this drop down menu, which is helpful to find various signal names for the capture.
+\end{itemize}
+
+The selected fault is then enabled halfway through the capture and the capture results are taken after it is finished.
+
+\centerimage{faultenable.png}{3cm}
+
+\begin{itemize}
+    \item The get\_capture\_results function is responsible for returning the capture results as a Pandas DataFrame. This is useful incase we want to do anything else with the signals, such as outputting them as a .csv file.
+\end{itemize}
+
+At this point, all the signals that were included in the capture function are available to look at over the 1 second period. Pytest uses the Allure framework to generate .html reports of tests after completion. It is possible to look under \textit{get\_capture\_results} of the html report to see all the captured signals and their respective graphs. \\
+
+There is an additional function for the purpose of comparing multiple signals on a single plot. This is useful for viewing 3-phase signals as well as power signals. There is another function \textit{to.csv()} dedicated to writing csv files using any selected signal. The df.index contains the time but is a different format than usual so the command \textit{df.index.total\_seconds()} is meant to format the time into only seconds, which allows the .csv file to be easily imported into MATLAB and other programs.
+
+\begin{itemize}
+    \item The output folder of \textit{to.csv()} can be changed. Currently, it outputs to a folder \textit{test\_fault\_results}. The full path of the output folder is not needed if it is within the working directory.
+\end{itemize}
+
+\subsection{Setter Fixtures and Indirect Parameterization}
+
+You may have noticed that there are no setup and teardown lines for the other 3 fixtures that have not been discussed yet:
+\begin{itemize}
+    \item \textbf{set\_fault\_type}
+    \item \textbf{set\_fault}
+    \item \textbf{set\_fault\_resistance}
+\end{itemize}
+
+These fixtures also have the same name as the name of the parameters in the \textbf{test\_faults} test case. The reason these fixtures exist is to solve a major problem within the test script: \\
+
+By the time the \textbf{test\_faults} test case begins, the \textbf{load\_model} fixture setup has already finished. As explained earlier, the \textbf{load\_model} fixture is responsible for setting the fault type and resistance. However, the values of the type and resistance parameters are acquired when \textbf{test\_faults} begins, so how can the \textbf{load\_model} fixture know which fault type and fault resistance to set if it runs beforehand? Furthermore, how does the fixture know for which fault to change these values? The answer lies within the use of indirect parameterization.
+
+\begin{itemize}
+    \item Indirect parameterization allows for a fixture to receive a parameter before then passing them to the test.
+    \item The only caveat is that the fixture and the parameter require the same name.
+\end{itemize}
+
+ As explained earlier, fixtures can be called by other fixtures and also return values, so the first 3 fixtures return their values in the \textit{yield} section of the fixture, to the \textbf{load\_model} fixture, which is then called by \textbf{test\_faults}. 
+
+\centerimage{setfaulttypefixture.png}{3cm}
+ 
+ \begin{itemize}
+    \item The \textit{request} keyword here means that the fixture can provide information about the calling function. This is required because the fixture needs the enabled parameter of the current test case. The parameter is accessed using \textit{request.param}. 
+     \item Unlike setting fault resistances and types, the contactor on the selected fault is enabled during the simulation and thus during the test case. Indirect parameterization allows for the parameter to be sent back to the test after it is sent to the fixture, so the name of the fault (and all the other test settings) to be enabled is still acquired during the test. 
+ \end{itemize}
+
+ You can read more about indirect parameterization here:
+\begin{itemize}
+    \item https://docs.pytest.org/en/stable/example/parametrize.html\#indirect-parametrization
+\end{itemize}
+
+\section{Running the Test}
+You can start and stop the test by clicking the appropriate buttons at the top of the screen. You can also choose to generate a .pdf report along with the Allure .html report.\\ 
+
+\begin{itemize}
+    \item While the test is running, you can see the progress of tests including their setup, test, and teardown runtime, by viewing the \textit{Test Run} window.
+\end{itemize}
+
+
+\centerimage{testrun.png}{8cm}
+
+\begin{itemize}
+    \item The \textit{console} window also shows the progress of the current test and the usual output of an IDE console. 
+\end{itemize}
+
+\centerimage{testconsole.png}{7cm}
+
+Once the test is finished, a .cmd script called \textit{open\_report} runs automatically and generates a report .html which opens on your browser. The report includes all test cases and their distinct steps, such as starting the simulation or capturing results. As explained earlier, the script can be modified so that the report includes additional graphs. An example of this are the extra plots that overlay different signals together.
+
+\centerimage{allureresults.png}{17cm}
+
+\noindent Note:
+\begin{itemize}
+    \item Although their values are correct, the capture results for PCC\_Monitor.VA to VC seem to appear incorrect on their respective plots. However, the values of their signals at a specific point in time can still be printed. The value of the signal PCC\_Monitor.VA is printed to stdout right before the fault occurs.
+\end{itemize}
+
+It is also possible to manually run \textit{open\_report} which can be found in the working directory, assuming a test case has run once before. The working directory should include the \textbf{test\_fault.py} file as well as the schematic file: 
+
+\centerimage{workingdirectory.png}{10cm}
+
+Running \textit{open\_report} before the script has stopped running generates a report that only includes the test cases up to the last completed one. \textit{open\_report} can also open the most recently generated report, as long as it has not been overridden by running the script again. 
+
+\end{document}
